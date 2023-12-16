@@ -118,23 +118,3 @@ void close_socket(int fd)
 		perror("close");
 	}
 }
-
-// int send_file(int socketfd, const char *filename) {
-// 	FILE *fp = fopen(filename, "r");
-// 	if (fp == NULL) {
-// 		perror("fopen");
-// 		return -1;
-// 	}
-// 	char buf[BUFLEN];
-// 	memset(buf, 0, BUFLEN);
-// 	size_t bytes_read = fread(buf, 1, BUFLEN, fp);
-// 	if (bytes_read < 0) {
-// 		perror("fread");
-// 		return -1;
-// 	}
-// 	if (send_socket(socketfd, buf, bytes_read) < 0) {
-// 		return -1;
-// 	}
-// 	fclose(fp);
-// 	return 0;
-// }
