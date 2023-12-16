@@ -15,6 +15,9 @@ struct lib {
 	char *funcname;
 	char *filename;
 
+	FILE *output_file_ptr;
+	FILE *input_file_ptr;
+
 	void *handle;
 
 	lambda_func_t run;

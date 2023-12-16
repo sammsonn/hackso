@@ -15,5 +15,8 @@ int connect_socket(int fd);
 ssize_t send_socket(int fd, const char *buf, size_t len);
 ssize_t recv_socket(int fd, char *buf, size_t len);
 void close_socket(int fd);
+int listen_socket(int fd);
+int accept_connection(int fd);
+int bind_socket(int fd);
 
 #endif /* _IPC_H */

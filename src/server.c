@@ -11,72 +11,93 @@
 
 #include "ipc.h"
 #include "server.h"
-#define BUFLEN 256
 
 #ifndef OUTPUT_TEMPLATE
 #define OUTPUT_TEMPLATE "../checker/output/out-XXXXXX"
 #endif
 
+int parse_command(const char *buf, char *name, char *func, char *params);
+
 static int lib_prehooks(struct lib *lib)
 {
-    // Load the library dynamically
-    lib->handle = dlopen(lib->libname, RTLD_NOW);
-    if (lib->handle == NULL) {
-        fprintf(stderr, "Error loading library: %s\n", dlerror());
-        return 1;
-    }
+	/* TODO: Implement lib_prehooks(). */
+	if (lib->outputfile != NULL) {
+		lib->output_file_ptr = fopen(lib->outputfile, "w");
+		if (lib->output_file_ptr == NULL) {
+			return -1;
+		}
+	} else {
+		lib->output_file_ptr = NULL;
+	}
 
-    // Obtain function pointers
-    lib->run = (lambda_func_t)dlsym(lib->handle, lib->funcname);
-    if (lib->run == NULL) {
-        fprintf(stderr, "Error obtaining function pointer: %s\n", dlerror());
-        dlclose(lib->handle);
-        return 1;
-    }
-    return 0;
+	if (lib->filename != NULL) {
+		lib->input_file_ptr = fopen(lib->filename, "r");
+		if (lib->input_file_ptr == NULL) {
+			return -1;
+		}
+	} else {
+		lib->input_file_ptr = NULL;
+	}
+
+	return 0;
 }
 
 static int lib_load(struct lib *lib)
 {
 	/* TODO: Implement lib_load(). */
-	lib->outputfile = malloc(strlen(OUTPUT_TEMPLATE) + 1);
-	strcpy(lib->outputfile, OUTPUT_TEMPLATE);
-	int fd = mkstemp(lib->outputfile);
-	if (fd < 0) {
-		perror("mkstemp");
+	if (lib->libname == NULL) {
 		return -1;
 	}
-	close(fd);
+
+	lib->handle = dlopen(lib->libname, RTLD_NOW);
+	if (lib->handle == NULL) {
+		return -1;
+	}
 	return 0;
 }
 
 static int lib_execute(struct lib *lib)
 {
 	/* TODO: Implement lib_execute(). */
-	if (lib->run != NULL) {
-		lib->p_run(lib->outputfile);
-	} else {
+
+	if (lib->funcname == NULL) {
+		// executex RUN daca nu exista funcname
+
+		lib->run = dlsym(lib->handle, "run");
 		lib->run();
+	} else if (lib->input_file_ptr == NULL) {
+		// asta inseamna ca nu am fisier de input, ceea ce inseamna ca apelez lambda fara parametrii
+		lib->run = dlsym(lib->handle, lib->funcname);
+		lib->run();
+	} else {
+		// suntem in cazul in care avem fisier de input, ceea ce inseamna ca vrem sa apelam lambda cu parameterii
+
+		lib->p_run = dlsym(lib->handle, lib->funcname);
+
+		const char *name;
+		const char *func;
+		const char *params;
+
+		parse_command(lib->filename, name, func, params);
+
+		lib->p_run(params);
 	}
-	
+
 	return 0;
 }
 
 static int lib_close(struct lib *lib)
 {
 	/* TODO: Implement lib_close(). */
-	if (dlclose(lib->handle) < 0) {
-		fprintf(stderr, "Error closing library: %s\n", dlerror());
-		return 1;
-	}
+	dlclose(lib->handle);
 	return 0;
 }
 
 static int lib_posthooks(struct lib *lib)
 {
 	/* TODO: Implement lib_posthooks(). */
-	free(lib->outputfile);
-
+	fclose(lib->input_file_ptr);
+	fclose(lib->output_file_ptr);
 	return 0;
 }
 
@@ -103,11 +124,11 @@ static int lib_run(struct lib *lib)
 	return lib_posthooks(lib);
 }
 
-static int parse_command(const char *buf, char *name, char *func, char *params)
+int parse_command(const char *buf, char *name, char *func, char *params)
 {
 	int ret;
 
-	ret = sscanf(buf, "%s [%s [%s]]", name, func, params);
+	ret = sscanf(buf, "%s %s %s", name, func, params);
 	if (ret < 0)
 		return -1;
 
@@ -139,22 +160,36 @@ int main(void)
 
 	while (1) {
 		/* TODO - get message from client */
-		accept_connection(fd);
-		char buf[BUFLEN];
-		recv_socket(fd, buf, BUFLEN);
+		int newsockfd = accept_connection(fd);
+		if (newsockfd == -1) {
+			perror("accept_connection");
+			return -1;
+		}
+
+		char buf[BUFSIZE];
+		memset(buf, 0, BUFSIZE);
+		recv_socket(newsockfd, buf, BUFSIZE);
+		buf[BUFSIZE - 1] = 0;
 
 		/* TODO - parse message with parse_command and populate lib */
 		ret = parse_command(buf, lib.libname, lib.funcname, lib.filename);
-		if(ret < 0) {
+		if (ret < 0) {
 			perror("parse_command");
 			return -1;
 		}
+
+		ret = send_socket(newsockfd, lib.filename, strlen(lib.filename));
+		if (ret < 0) {
+			perror("send_socket");
+			return -1;
+		}
+
 		/* TODO - handle request from client */
 		// ret = lib_run(&lib);
 	}
 
 	/* TODO - close socket */
-	// close_socket(fd);
+	close_socket(fd);
 
 	return 0;
 }

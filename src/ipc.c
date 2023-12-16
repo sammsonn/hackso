@@ -43,6 +43,8 @@ int bind_socket(int fd)
         close(fd);
         return -1;
     }
+
+	return 0;
 }
 
 int listen_socket(int fd)
@@ -82,7 +84,7 @@ ssize_t send_socket(int fd, const char *buf, size_t len)
 	return bytes_sent;
 }
 
-ssize_t accept_connection(int sockfd)
+int accept_connection(int sockfd)
 {
     struct sockaddr_un addr;
     socklen_t addrlen;
@@ -116,36 +118,6 @@ void close_socket(int fd)
 		perror("close");
 	}
 }
-
-
-// int bind_socket(int socketfd) {
-// 	struct sockaddr_un addr;
-// 	memset(&addr, 0, sizeof(addr));
-// 	addr.sun_family = AF_UNIX;
-// 	strncpy(addr.sun_path, SOCKET_NAME, sizeof(addr.sun_path) - 1);
-// 	if (bind(socketfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-// 		perror("bind");
-// 		return -1;
-// 	}
-// 	return 0;
-// }
-
-// int listen_socket(int socketfd) {
-// 	if (listen(socketfd, 5) == -1) {
-// 		perror("listen");
-// 		return -1;
-// 	}
-// 	return 0;
-// }
-
-// int accept_socket(int socketfd) {
-// 	int clientfd = accept(socketfd, NULL, NULL);
-// 	if (clientfd == -1) {
-// 		perror("accept");
-// 		return -1;
-// 	}
-// 	return clientfd;
-// }
 
 // int send_file(int socketfd, const char *filename) {
 // 	FILE *fp = fopen(filename, "r");
