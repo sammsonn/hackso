@@ -44,16 +44,18 @@ static int lib_prehooks(struct lib *lib)
 static int lib_load(struct lib *lib)
 {
 	/* TODO: Implement lib_load(). */
-	lib->run = dlsym(lib->handle, lib->funcname);
-	if (lib->run == NULL) {
-		fprintf(stderr, "Error loading function: %s\n", dlerror());
-		return 1;
-	}
-
-	lib->p_run = dlsym(lib->handle, lib->funcname);
-	if (lib->p_run == NULL) {
-		fprintf(stderr, "Error loading function: %s\n", dlerror());
-		return 1;
+	if (lib->funcname[0] == 0) {
+		lib->run = dlsym(lib->handle, lib->funcname);
+		if (lib->run == NULL) {
+			fprintf(stderr, "Error loading function: %s\n", dlerror());
+			return 1;
+		}
+	} else {
+			lib->p_run = dlsym(lib->handle, lib->funcname);
+		if (lib->p_run == NULL) {
+			fprintf(stderr, "Error loading function: %s\n", dlerror());
+			return 1;
+		}
 	}
 
 
