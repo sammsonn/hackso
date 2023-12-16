@@ -117,47 +117,44 @@ static int parse_command(const char *buf, char *name, char *func, char *params)
 int main(void)
 {
 	/* TODO: Implement server connection. */
-	/* TODO - get message from client */
-	/* TODO - parse message with parse_command and populate lib */
-	/* TODO - handle request from client */
-	int sockfd = create_socket();
-	if (sockfd < 0) {
-		return 1;
-	}
-	if (bind_socket(sockfd) < 0) {
-		return 1;
-	}
-	if (listen_socket(sockfd) < 0) {
-		return 1;
-	}
-	int clientfd = accept_socket(sockfd);
-	if (clientfd < 0) {
-		return 1;
-	}
-	char buf[BUFLEN];
-	memset(buf, 0, BUFLEN);
-	ssize_t bytes_recv = recv_socket(clientfd, buf, BUFLEN);
-	if (bytes_recv < 0) {
-		return 1;
-	}
+	int ret;
 	struct lib lib;
-	memset(&lib, 0, sizeof(lib));
-	int ret = parse_command(buf, lib.libname, lib.funcname, lib.filename);
-	if (ret < 0) {
-		return 1;
-	}
-	lib.p_run = (lambda_func_t)dlsym(lib.handle, lib.funcname);
-	if (lib.p_run == NULL) {
-		fprintf(stderr, "Error obtaining function pointer: %s\n", dlerror());
-		return 1;
-	}
-	lib_run(&lib);
-	if (send_file(clientfd, lib.outputfile) < 0) {
-		return 1;
-	}
-	close_socket(clientfd);
-	close_socket(sockfd);
+	int fd = -1;
 
+	fd = create_socket();
+	if (fd < 0) {
+		perror("create_socket");
+		return -1;
+	}
+	ret = bind_socket(fd);
+	if (ret < 0) {
+		perror("bind_socket");
+		return -1;
+	}
+	ret = listen_socket(fd);
+	if (ret < 0) {
+		perror("listen_socket");
+		return -1;
+	}
+
+	while (1) {
+		/* TODO - get message from client */
+		accept_connection(fd);
+		char buf[BUFLEN];
+		recv_socket(fd, buf, BUFLEN);
+
+		/* TODO - parse message with parse_command and populate lib */
+		ret = parse_command(buf, lib.libname, lib.funcname, lib.filename);
+		if(ret < 0) {
+			perror("parse_command");
+			return -1;
+		}
+		/* TODO - handle request from client */
+		// ret = lib_run(&lib);
+	}
+
+	/* TODO - close socket */
+	// close_socket(fd);
 
 	return 0;
 }
