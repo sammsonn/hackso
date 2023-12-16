@@ -6,7 +6,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#define SOCK_PATH "/tmp/my_socket"
+#define SOCK_PATH "/tmp/"
+#define BUFLEN 256
 
 
 #include "ipc.h"
@@ -65,4 +66,54 @@ void close_socket(int fd)
 	if (close(fd) < 0) {
 		perror("close");
 	}
+}
+
+
+int bind_socket(int socketfd) {
+	struct sockaddr_un addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, SOCK_PATH, sizeof(addr.sun_path) - 1);
+	if (bind(socketfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+		perror("bind");
+		return -1;
+	}
+	return 0;
+}
+
+int listen_socket(int socketfd) {
+	if (listen(socketfd, 5) == -1) {
+		perror("listen");
+		return -1;
+	}
+	return 0;
+}
+
+int accept_socket(int socketfd) {
+	int clientfd = accept(socketfd, NULL, NULL);
+	if (clientfd == -1) {
+		perror("accept");
+		return -1;
+	}
+	return clientfd;
+}
+
+int send_file(int socketfd, const char *filename) {
+	FILE *fp = fopen(filename, "r");
+	if (fp == NULL) {
+		perror("fopen");
+		return -1;
+	}
+	char buf[BUFLEN];
+	memset(buf, 0, BUFLEN);
+	size_t bytes_read = fread(buf, 1, BUFLEN, fp);
+	if (bytes_read < 0) {
+		perror("fread");
+		return -1;
+	}
+	if (send_socket(socketfd, buf, bytes_read) < 0) {
+		return -1;
+	}
+	fclose(fp);
+	return 0;
 }

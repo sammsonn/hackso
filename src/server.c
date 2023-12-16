@@ -11,6 +11,7 @@
 
 #include "ipc.h"
 #include "server.h"
+#define BUFLEN 256
 
 #ifndef OUTPUT_TEMPLATE
 #define OUTPUT_TEMPLATE "../checker/output/out-XXXXXX"
@@ -106,7 +107,7 @@ static int parse_command(const char *buf, char *name, char *func, char *params)
 {
 	int ret;
 
-	ret = sscanf(buf, "%s %s %s", name, func, params);
+	ret = sscanf(buf, "%s [%s [%s]]", name, func, params);
 	if (ret < 0)
 		return -1;
 
@@ -116,24 +117,47 @@ static int parse_command(const char *buf, char *name, char *func, char *params)
 int main(void)
 {
 	/* TODO: Implement server connection. */
-	int ret;
-	struct lib lib;
-	char buf[BUFSIZ];
-	char name[BUFSIZ];
-	char func[BUFSIZ];
-	char params[BUFSIZ];
-
-
-	while (1) {
-		/* TODO - get message from client */
-		/* TODO - parse message with parse_command and populate lib */
-		/* TODO - handle request from client */
-		ret = lib_run(&lib);
-		if (ret < 0) {
-			perror("lib_run");
-			return -1;
-		}
+	/* TODO - get message from client */
+	/* TODO - parse message with parse_command and populate lib */
+	/* TODO - handle request from client */
+	int sockfd = create_socket();
+	if (sockfd < 0) {
+		return 1;
 	}
+	if (bind_socket(sockfd) < 0) {
+		return 1;
+	}
+	if (listen_socket(sockfd) < 0) {
+		return 1;
+	}
+	int clientfd = accept_socket(sockfd);
+	if (clientfd < 0) {
+		return 1;
+	}
+	char buf[BUFLEN];
+	memset(buf, 0, BUFLEN);
+	ssize_t bytes_recv = recv_socket(clientfd, buf, BUFLEN);
+	if (bytes_recv < 0) {
+		return 1;
+	}
+	struct lib lib;
+	memset(&lib, 0, sizeof(lib));
+	int ret = parse_command(buf, lib.libname, lib.funcname, lib.filename);
+	if (ret < 0) {
+		return 1;
+	}
+	lib.p_run = (lambda_func_t)dlsym(lib.handle, lib.funcname);
+	if (lib.p_run == NULL) {
+		fprintf(stderr, "Error obtaining function pointer: %s\n", dlerror());
+		return 1;
+	}
+	lib_run(&lib);
+	if (send_file(clientfd, lib.outputfile) < 0) {
+		return 1;
+	}
+	close_socket(clientfd);
+	close_socket(sockfd);
+
 
 	return 0;
 }
