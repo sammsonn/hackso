@@ -50,43 +50,44 @@ static int lib_load(struct lib *lib)
 		return 1;
 	}
 
+	lib->p_run = dlsym(lib->handle, lib->funcname);
+	if (lib->p_run == NULL) {
+		fprintf(stderr, "Error loading function: %s\n", dlerror());
+		return 1;
+	}
+
+
 	return 0;
 }
 
 static int lib_execute(struct lib *lib)
 {
 	/* TODO: Implement lib_execute(). */
-	if (strlen(lib->funcname) == 0) {
-		lib->funcname = "run";
-		lib->run = dlsym(lib->handle, "run");
-		int fd = open(lib->outputfile, O_CREAT | O_WRONLY, 0644);
+	if(lib->funcname[0] == 0) {
+		int fd = mkstemp(OUTPUT_TEMPLATE);
 		if (fd < 0) {
-			perror("open");
+			perror("mkstemp");
 			return 1;
 		}
 		dup2(fd, 1);
 		lib->run();
-	} else if (lib->filename[0] == 0) {
-		lib->run = dlsym(lib->handle, lib->funcname);
-		int fd = open(lib->outputfile, O_CREAT | O_WRONLY, 0644);
+	} else if(lib->filename[0] == 0) {
+		int fd = mkstemp(OUTPUT_TEMPLATE);
 		if (fd < 0) {
-			perror("open");
+			perror("mkstemp");
 			return 1;
 		}
 		dup2(fd, 1);
-
 		lib->run();
 	} else {
-		lib->p_run = dlsym(lib->handle, lib->funcname);
-		int fd = open(lib->outputfile, O_CREAT | O_WRONLY, 0644);
+		int fd = mkstemp(OUTPUT_TEMPLATE);
 		if (fd < 0) {
-			perror("open");
+			perror("mkstemp");
 			return 1;
 		}
 		dup2(fd, 1);
 		lib->p_run(lib->filename);
 	}
-
 	return 0;
 }
 
